@@ -156,10 +156,8 @@ fn is_blocklisted_fn<'tcx>(
             }
 
             if tcx.opt_item_ident(def.did).map(|i| i.name) == Some(sym.fmt_decimal) {
-                if let Some(parent_def_id) = tcx.parent(def.did) {
-                    if is_debug_fmt_method(parent_def_id) {
-                        return true;
-                    }
+                if is_debug_fmt_method(tcx.parent(def.did)) {
+                    return true;
                 }
             }
         }
@@ -207,7 +205,7 @@ impl CodegenBackend for SpirvCodegenBackend {
                 .parse::<target::SpirvTarget>()
                 .map(|target| target.rustc_target())
                 .ok(),
-            TargetTriple::TargetPath(_) => None,
+            TargetTriple::TargetJson{..} => None,
         }
     }
 
@@ -219,6 +217,8 @@ impl CodegenBackend for SpirvCodegenBackend {
 
         crate::abi::provide(providers);
         crate::attr::provide(providers);
+        // FIXME(antoyo) compute list of enabled features from cli flags
+        providers.global_backend_features = |_tcx, ()| vec![];
     }
 
     fn provide_extern(&self, providers: &mut query::ExternProviders) {
@@ -329,7 +329,7 @@ impl WriteBackendMethods for SpirvCodegenBackend {
 
     unsafe fn optimize_thin(
         _cgcx: &CodegenContext<Self>,
-        thin_module: &mut ThinModule<Self>,
+        thin_module: ThinModule<Self>,
     ) -> Result<ModuleCodegen<Self::Module>, FatalError> {
         let module = ModuleCodegen {
             module_llvm: spirv_tools::binary::to_binary(thin_module.data())
@@ -373,29 +373,22 @@ impl WriteBackendMethods for SpirvCodegenBackend {
         (module.name, SpirvModuleBuffer(module.module_llvm))
     }
 
-    fn run_lto_pass_manager(
+    fn optimize_fat(
         _: &CodegenContext<Self>,
-        _: &ModuleCodegen<Self::Module>,
-        _: &ModuleConfig,
-        _: bool,
+        _: &mut ModuleCodegen<Self::Module>,
     ) -> Result<(), FatalError> {
         todo!()
     }
 }
 
 impl ExtraBackendMethods for SpirvCodegenBackend {
-    fn new_metadata(&self, _: TyCtxt<'_>, _: &str) -> Self::Module {
-        Self::Module::new()
-    }
-
     fn codegen_allocator<'tcx>(
         &self,
         _: TyCtxt<'tcx>,
-        _: &mut Self::Module,
         _: &str,
         _: AllocatorKind,
         _: bool,
-    ) {
+    ) -> Self::Module {
         todo!()
     }
 

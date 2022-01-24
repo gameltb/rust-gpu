@@ -365,4 +365,13 @@ impl<'a, 'tcx> IntrinsicCallMethods<'tcx> for Builder<'a, 'tcx> {
     fn va_end(&mut self, _val: Self::Value) -> Self::Value {
         todo!()
     }
+
+    fn type_checked_load(
+        &mut self,
+        llvtable: Self::Value,
+        vtable_byte_offset: u64,
+        typeid: Self::Value,
+    ) -> Self::Value {
+        todo!()
+    }
 }
